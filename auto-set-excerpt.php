@@ -3,8 +3,8 @@
 Plugin Name: Auto Set Excerpt
 Plugin URI: https://github.com/amberkayle/auto-set-excerpt
 Description: Auto set the excerpt on save. Will contain the first 150 words of a post and exclude tags.
-Version: 1.0
-Author: Kayle
+Version: 1.1
+Author: Kayle Armstrong
 Author URI: amberkaylearmstrong.com
 Author Email: amber.kayle.armstrong@gmail.com
 License:
@@ -49,8 +49,9 @@ class AutoSetExcerpt {
 	    // Define constants used throughout the plugin
 	    $this->init_plugin_constants();
 		
-		add_filter( 'wp_insert_post_data' , array( $this, 'set_post_excerpt' ) );
-		add_filter( 'excerpt_length', array( $this, 'set_excerpt_length' ) );
+		add_filter( 'excerpt_length', array( &$this, 'set_excerpt_length' ), 1 );
+		add_filter( 'wp_insert_post_data' , array( &$this, 'set_post_excerpt' ) );
+		
 
 	} // end constructor
 	
@@ -62,10 +63,20 @@ class AutoSetExcerpt {
 	 *
 	 */
 	function set_post_excerpt( $data, $postarr = '' ) {
-		if( isset( $data['post_content'] )  ){
+		if( isset( $data['post_content'] ) ){
 			$content = $data['post_content'];
-			$content_no_tags = strip_tags( $content );
-			$excerpt = wp_trim_excerpt( $content_no_tags );
+			
+			// Modified version of wp_trim_words
+			if ( null === $content ){
+	            $content = __( '&hellip;' );
+			}
+			$content = strip_tags( $content );
+	        $words_array = preg_split( "/[\n\r\t ]+/", $content, self::length + 1, PREG_SPLIT_NO_EMPTY );
+	        if ( count( $words_array ) > self::length ) {
+	            array_pop( $words_array );
+			}
+			
+			$excerpt = implode( ' ', $words_array );
 			
 			$data['post_excerpt'] = $excerpt ;
 		}
@@ -77,7 +88,7 @@ class AutoSetExcerpt {
 	
 
 	function set_excerpt_length( $length ) {
-		return $this->length;
+		return self::length;
 	}
 
 	
